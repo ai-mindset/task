@@ -3,7 +3,7 @@ name: Release
 on:
   release:
     types: [created]
-  workflow_dispatch:
+  workflow_dispatch: # For testing without creating a release
 
 jobs:
   build:
@@ -14,47 +14,33 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: task
-            asset_name: task-linux-amd64.tar.gz
+            asset_name: task-linux-x86_64.tar.gz
           - os: windows-latest
             artifact_name: task.exe
-            asset_name: task-windows-amd64.zip
+            asset_name: task-windows-x86_64.zip
           - os: macos-latest
             artifact_name: task
-            asset_name: task-macos-amd64.tar.gz
+            asset_name: task-macos-x86_64.tar.gz
 
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+        run: cargo build --release
 
-      - name: Package (Unix)
+      - name: Package (Linux/macOS)
         if: matrix.os != 'windows-latest'
-        run: |
-          cd target/release
-          tar czf ../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+        run: tar -czf ${{ matrix.asset_name }} -C target/release ${{ matrix.artifact_name }}
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
-        run: |
-          cd target/release
-          7z a -tzip ../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+        run: Compress-Archive -Path "target\release\${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.asset_name }}"
+        shell: pwsh
 
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload Release Asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ matrix.asset_name }}
-          asset_name: ${{ matrix.asset_name }}
-          tag: ${{ github.ref }}
-          overwrite: true
+          files: ${{ matrix.asset_name }}
