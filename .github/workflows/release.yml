@@ -41,8 +41,19 @@ jobs:
         run: Compress-Archive -Path "target\release\${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.asset_name }}"
         shell: pwsh
 
-      - name: Upload Release Asset
+      - name: Upload Release Asset (manually created release)
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ matrix.asset_name }}
+
+      - name: Upload Release Asset (auto-created release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-release-asset@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.asset_name }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/octet-stream
