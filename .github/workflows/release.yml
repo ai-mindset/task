@@ -7,8 +7,13 @@ on:
   release:
     types: [created]
   workflow_dispatch:
+    # Add input for manual testing
+    inputs:
+      tag_name:
+        description: 'Tag name for release (e.g., v1.0.0)'
+        required: true
+        default: 'test-v0.0.0'
 
-# Add permissions block
 permissions:
   contents: write
 
@@ -46,10 +51,9 @@ jobs:
         run: Compress-Archive -Path "target\release\${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.asset_name }}"
         shell: pwsh
 
-      # Single upload step that works for both cases
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ matrix.asset_name }}
-          # For tag pushes, use the ref as the tag name
-          tag_name: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          # Get tag from different sources based on trigger
+          tag_name: ${{ github.event_name == 'push' && github.ref_name || github.event.release.tag_name || github.event.inputs.tag_name }}
