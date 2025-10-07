@@ -106,17 +106,34 @@ fn main() {
 
     match cli.command {
         Some(Commands::Add { date, text }) => {
-            let task_text = text.join(" ");
+            // Get today's date
+            let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
+
+            // Determine due date and task text
+            let (due_date, task_text) = match date {
+                // Date parameter is provided
+                Some(d) => {
+                    // Check if it's a properly formatted date
+                    if d.len() == 10 && d.chars().nth(4) == Some('-') {
+                        // It's a valid date format
+                        (d, text.join(" "))
+                    } else {
+                        // Not a date - it's actually part of the task text
+                        // Prepend it to the rest of the text
+                        let mut full_text = vec![d];
+                        full_text.extend(text);
+                        (today.clone(), full_text.join(" "))
+                    }
+                }
+                // No date parameter, just use today's date
+                None => (today.clone(), text.join(" ")),
+            };
+
+            // Validate the task text
             if task_text.is_empty() {
                 eprintln!("Error: Task cannot be empty.");
                 return;
             }
-
-            let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
-            let due_date = match date {
-                Some(d) if d.len() == 10 && d.chars().nth(4) == Some('-') => d,
-                _ => today.clone(),
-            };
 
             let task_line = format!("- [ ] 📅 {} 📋 {} {}", due_date, today, task_text);
             let mut lines = read_lines(&task_file);
@@ -333,7 +350,9 @@ fn main() {
         None => {
             println!("Usage: task [command] [args]");
             println!("Commands:");
-            println!("  add|a [date] <text>  Add a new task with optional due date (YYYY-MM-DD)");
+            println!(
+                "  add|a [date] \"<text>\"  Add a new task with optional due date (YYYY-MM-DD), defaults to today"
+            );
             println!("  today|t              List tasks due today");
             println!("  week|w               List tasks due in the next 7 days");
             println!(

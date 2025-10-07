@@ -13,7 +13,7 @@ and filtered by date -all from your terminal.
 
 ```console
 # Install from source
-cargo install --git https://github.com/yourusername/task
+cargo install --git https://github.com/ai-mindset/task
 
 # Or download binary from releases
 # Then make it executable and move to your PATH
