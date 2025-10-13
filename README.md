@@ -38,6 +38,41 @@ task done 2
 
 # View tasks due this week
 task week
+
+# Use a custom task file location
+TASK_FILE=~/my-tasks.md task add "Custom location task"
+```
+
+### Task File Location
+
+By default, tasks are stored in:
+- Linux/macOS: `~/.task/work_log.md`
+- Windows: `C:\Users\<YourUsername>\AppData\Local\Task\work_log.md`
+
+You can customize this location by setting the `TASK_FILE` environment variable:
+
+```console
+# Linux/macOS
+TASK_FILE=~/Documents/my-tasks.md task add "Use custom file"
+
+# Windows (Command Prompt)
+set TASK_FILE=C:\Users\YourUsername\Documents\my-tasks.md
+task add "Use custom file"
+
+# Windows (PowerShell)
+$env:TASK_FILE="C:\Users\YourUsername\Documents\my-tasks.md"
+task add "Use custom file"
+```
+
+For persistent settings:
+
+```console
+# Linux/macOS (.bashrc, .zshrc, etc.)
+export TASK_FILE=~/Documents/work-tasks.md
+
+# Windows (System Environment Variables)
+# Right-click on This PC > Properties > Advanced System Settings > Environment Variables
+# Add TASK_FILE as a user variable
 ```
 
 ## Features
@@ -47,6 +82,8 @@ task week
 - Date-based filtering (today, this week, completed in past X weeks)
 - Simple CLI interface with shortcuts (t=today, p=pending)
 - Atomic file operations for data safety
+- Cross-platform support (Linux, macOS, Windows)
+- Configurable storage location via TASK_FILE environment variable
 
 ## Commands
 
