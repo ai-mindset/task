@@ -55,32 +55,88 @@ enum Commands {
 }
 
 fn get_task_file() -> PathBuf {
-    env::var("TASK_FILE")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            let home = env::var("HOME").unwrap_or_else(|_| String::from("."));
-            PathBuf::from(home).join("Documents/work_log.md")
-        })
+    // First try to use TASK_FILE environment variable if set
+    if let Ok(path) = env::var("TASK_FILE") {
+        return PathBuf::from(path);
+    }
+
+    // Determine home directory in a cross-platform way
+    let home = if cfg!(windows) {
+        // On Windows, try USERPROFILE first, then HOMEDRIVE+HOMEPATH
+        env::var("USERPROFILE").or_else(|_: env::VarError| -> Result<String, env::VarError> {
+            let drive = env::var("HOMEDRIVE").unwrap_or_else(|_| String::from("C:"));
+            let path = env::var("HOMEPATH").unwrap_or_else(|_| String::from("\\Users\\Default"));
+            Ok(format!("{}{}", drive, path))
+        }).unwrap_or_else(|_| String::from("."))
+    } else {
+        // On Unix systems (Linux, macOS), use HOME
+        env::var("HOME").unwrap_or_else(|_| String::from("."))
+    };
+
+    // Create the task directory path (cross-platform)
+    let task_dir = if cfg!(windows) {
+        PathBuf::from(&home).join("AppData").join("Local").join("Task")
+    } else {
+        PathBuf::from(&home).join(".task")
+    };
+
+    // Create directory if it doesn't exist
+    if !task_dir.exists() {
+        std::fs::create_dir_all(&task_dir).unwrap_or_else(|e| {
+            eprintln!("Error creating task directory: {}", e);
+            eprintln!("Please set TASK_FILE environment variable to a writable location.");
+            std::process::exit(1);
+        });
+    }
+
+    task_dir.join("work_log.md")
 }
 
 fn read_lines(path: &PathBuf) -> Vec<String> {
     if !path.exists() {
-        File::create(path).unwrap();
+        File::create(path).unwrap_or_else(|e| {
+            eprintln!("Error creating task file at {}: {}", path.display(), e);
+            eprintln!("Please set TASK_FILE environment variable to a writable location.");
+            std::process::exit(1);
+        });
     }
-    BufReader::new(File::open(path).unwrap())
-        .lines()
-        .collect::<Result<_, _>>()
-        .unwrap()
+    BufReader::new(File::open(path).unwrap_or_else(|e| {
+        eprintln!("Error opening task file at {}: {}", path.display(), e);
+        eprintln!("Please check file permissions or set TASK_FILE environment variable.");
+        std::process::exit(1);
+    }))
+    .lines()
+    .collect::<Result<_, _>>()
+    .unwrap_or_else(|e| {
+        eprintln!("Error reading task file: {}", e);
+        std::process::exit(1);
+    })
 }
 
 fn write_lines(path: &PathBuf, lines: &[String]) {
     let temp_path = path.with_extension("tmp");
-    let mut file = File::create(&temp_path).unwrap();
+    let mut file = File::create(&temp_path).unwrap_or_else(|e| {
+        eprintln!("Error creating temporary file: {}", e);
+        eprintln!("Please check directory permissions or set TASK_FILE environment variable.");
+        std::process::exit(1);
+    });
+
     for line in lines {
-        writeln!(file, "{}", line).unwrap();
+        writeln!(file, "{}", line).unwrap_or_else(|e| {
+            eprintln!("Error writing to file: {}", e);
+            std::process::exit(1);
+        });
     }
-    file.sync_all().unwrap();
-    fs::rename(temp_path, path).unwrap();
+
+    file.sync_all().unwrap_or_else(|e| {
+        eprintln!("Error syncing file: {}", e);
+        std::process::exit(1);
+    });
+
+    fs::rename(temp_path, path).unwrap_or_else(|e| {
+        eprintln!("Error renaming temporary file: {}", e);
+        std::process::exit(1);
+    });
 }
 
 fn extract_date(line: &str, regex: &Regex) -> Option<NaiveDate> {
