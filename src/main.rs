@@ -211,7 +211,8 @@ fn main() {
             {
                 if let Some(cap) = DUE_DATE_RE.captures(line) {
                     if cap.get(1).map_or("", |m| m.as_str()) == today {
-                        println!("{} - {}", i + 1, line);
+                        let display_line = line.strip_prefix("- ").unwrap_or(line);
+                        println!("{} - {}", i + 1, display_line);
                         found = true;
                     }
                 }
@@ -235,7 +236,8 @@ fn main() {
             {
                 if let Some(due_date) = extract_date(line, &DUE_DATE_RE) {
                     if due_date >= today && due_date <= week_later {
-                        println!("{} - {}", i + 1, line);
+                        let display_line = line.strip_prefix("- ").unwrap_or(line);
+                        println!("{} - {}", i + 1, display_line);
                         found = true;
                     }
                 }
@@ -259,7 +261,8 @@ fn main() {
             {
                 if let Some(completion_date) = extract_date(line, &COMPLETION_DATE_RE) {
                     if completion_date >= weeks_ago && completion_date <= today {
-                        println!("{} - {}", i + 1, line);
+                        let display_line = line.strip_prefix("- ").unwrap_or(line);
+                        println!("{} - {}", i + 1, display_line);
                         found = true;
                     }
                 }
@@ -272,7 +275,7 @@ fn main() {
         Some(Commands::Pending) => {
             println!("Pending tasks:");
             let lines = read_lines(&task_file);
-            let pending = lines
+            let mut pending = lines
                 .iter()
                 .enumerate()
                 .filter(|(_, l)| l.contains("- [ ]"))
@@ -281,8 +284,10 @@ fn main() {
             if pending.is_empty() {
                 println!("No pending tasks.");
             } else {
+                pending.reverse();
                 for (i, (_, line)) in pending.iter().enumerate() {
-                    println!("{} - {}", i + 1, line);
+                    let display_line = line.strip_prefix("- ").unwrap_or(line);
+                    println!("{} - {}", i + 1, display_line);
                 }
             }
         }
@@ -302,18 +307,21 @@ fn main() {
                     println!("No completed tasks.");
                 } else {
                     for (i, (_, line)) in completed.iter().enumerate() {
-                        println!("{} - {}", i + 1, line);
+                        let display_line = line.strip_prefix("- ").unwrap_or(line);
+                        println!("{} - {}", i + 1, display_line);
                     }
                 }
                 return;
             }
 
-            let pending = lines
+            let mut pending = lines
                 .iter()
                 .enumerate()
                 .filter(|(_, l)| l.contains("- [ ]"))
                 .map(|(i, _)| i)
                 .collect::<Vec<_>>();
+
+            pending.reverse();
 
             let completion_date = Local::now().date_naive().format("%Y-%m-%d").to_string();
 
@@ -349,19 +357,22 @@ fn main() {
                     println!("No cancelled tasks.");
                 } else {
                     for (i, (_, line)) in cancelled.iter().enumerate() {
-                        println!("{} - {}", i + 1, line);
+                        let display_line = line.strip_prefix("- ").unwrap_or(line);
+                        println!("{} - {}", i + 1, display_line);
                     }
                 }
                 return;
             }
 
             let task_num = task_num.unwrap();
-            let pending = lines
+            let mut pending = lines
                 .iter()
                 .enumerate()
                 .filter(|(_, l)| l.contains("- [ ]"))
                 .map(|(i, _)| i)
                 .collect::<Vec<_>>();
+
+            pending.reverse();
 
             if task_num == 0 || task_num > pending.len() {
                 eprintln!(
@@ -398,7 +409,8 @@ fn main() {
                 println!("No tasks found.");
             } else {
                 for (i, line) in lines.iter().enumerate() {
-                    println!("{} - {}", i + 1, line);
+                    let display_line = line.strip_prefix("- ").unwrap_or(line);
+                    println!("{} - {}", i + 1, display_line);
                 }
             }
         }
